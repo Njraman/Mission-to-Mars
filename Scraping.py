@@ -20,7 +20,8 @@ def scrape_all():
         "news_paragraph": news_paragraph,
         "featured_image": featured_image(browser),
         "facts": mars_facts(),
-        "last_modified": dt.datetime.now()
+        "last_modified": dt.datetime.now(),
+        "hemispheres": hemisphere_data(browser)
     }
 
     # Stop webdriver and return data
@@ -97,6 +98,53 @@ def mars_facts():
 
     # Convert dataframe into HTML format, add bootstrap
     return df.to_html(classes="table table-striped")
+
+def hemisphere_data(browser):
+    # Visit URL
+    url = 'https://marshemispheres.com/'
+    browser.visit(url)
+
+    # Parse the HTML
+    html = browser.html
+    html_soup = soup(html, 'html.parser')       
+
+    #Create a list to hold the images and titles.
+    hemisphere_image_urls = []
+    #Find the results box
+    results_box = html_soup.find('div', class_='collapsible results')
+    items = results_box.find_all('div', class_='item')  
+    for item in items:
+        hemispheres = {}
+        # Click on the hemisphere link
+        hemi_link = item.find('a')['href']
+        browser.links.find_by_href(hemi_link)[1].click()
+        
+        # Parse the resulting html with soup
+        html = browser.html
+        img_soup = soup(html, 'html.parser')
+        
+        # Get the title for the image
+        hemi_img_title = img_soup.find('h2', class_='title').get_text()
+        
+        #Retrieve full resolution image URL
+        downloads_li = img_soup.find('li') 
+        hemi_img_relurl = downloads_li.find('a', target='_blank').get('href')
+        hemi_img_url = f'https://marshemispheres.com/{hemi_img_relurl}'
+        
+        # Add the URL and Title to dictionary
+        hemispheres['img_url'] = hemi_img_url
+        hemispheres['title'] = hemi_img_title
+        
+        #Add the dictionary to the list
+        hemisphere_image_urls.append(hemispheres)
+        
+        browser.back()
+
+    # Return scraped data as a list of dictionaries
+    return hemisphere_image_urls
+
+
+
 
 if __name__ == "__main__":
 
